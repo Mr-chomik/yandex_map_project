@@ -16,11 +16,18 @@ def render_search(screen, first=False):
         pygame.draw.rect(screen, (255, 255, 255), (90, 15, 500, 35), 0)
     pygame.draw.rect(screen, (50, 50, 50), (90, 15, 500, 35), 2)
 
+    #rect = create_theme_button()
+    #pygame.draw.rect(screen, (0, 0, 0), rect)
 
-def map_resp(long, leng, spn="0.05", pt=None):
+    dark_theme_button_image = load_image(f"to_{style}_theme.png")
+    screen.blit(dark_theme_button_image, (545, 395))
+
+
+def map_resp(long, leng, spn="0.05", theme='light', pt=None):
     params = {"ll": f"{long},{leng}",
               "spn": f"{spn},{spn}",
-              "apikey": "f3a0fe3a-b07e-4840-a1da-06f18b2ddf13"}
+              "apikey": "f3a0fe3a-b07e-4840-a1da-06f18b2ddf13",
+              "theme": theme}
 
     if pt:
         params["pt"] = f"{pt},pm2rdm"
@@ -73,7 +80,7 @@ def input_address(screen, address):
         address = ""
         try:
             point = f"{long},{leng}"
-            mapa = map_resp(long, leng, pt=point)
+            mapa = map_resp(long, leng, theme=style, pt=point)
             if mapa:
                 screen.fill((0, 0, 0))
                 screen.blit(pygame.image.load(mapa), (0, 0))
@@ -101,20 +108,43 @@ def input_address(screen, address):
     return address
 
 
+def create_theme_button():
+    x = 545
+    y = 395
+    size = 50
+    black = 0, 0, 0
+    rect = pygame.Rect(x, y, size, size)
+    return rect
+
+def load_image(image):
+    image = pygame.image.load(image)
+    image = pygame.transform.scale(image, (50, 50))
+    return image
+
+
 pygame.init()
 screen = pygame.display.set_mode((600, 450))
 point = None
 long = "37.530887"
 leng = "55.703118"
 spn = "0.05"
-screen.blit(pygame.image.load(map_resp(long, leng, spn)), (0, 0))
+style = "light"
+screen.blit(pygame.image.load(map_resp(long, leng, spn, style)), (0, 0))  # отрисовка карты
+create_theme_button()
 render_search(screen, first=True)
+rect = create_theme_button()
 pygame.display.flip()
 address = ""
 inputting = False
 running = True
+
+
 while running:
     for event in pygame.event.get():
+
+        rect = create_theme_button()
+
+
         if event.type == pygame.QUIT:
             running = False
             pygame.quit()
@@ -126,50 +156,61 @@ while running:
                 if float(spn) <= 0.005:
                     spn = "0.001"
                 screen.fill((0, 0, 0))
-                screen.blit(pygame.image.load(map_resp(long, leng, spn, pt=point)), (0, 0))
+                screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
 
             if event.key == pygame.K_PAGEDOWN or event.key == pygame.K_s:
                 spn = str(round(float(spn) + 0.005, 3))
                 if float(spn) >= 0.95:
                     spn = "0.95"
                 screen.fill((0, 0, 0))
-                screen.blit(pygame.image.load(map_resp(long, leng, spn, pt=point)), (0, 0))
+                screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
 
             if event.key == pygame.K_UP:
                 leng = str(round(float(leng) + 0.01, 3))
                 if float(leng) >= 77:
                     leng = "77.000"
                 screen.fill((0, 0, 0))
-                screen.blit(pygame.image.load(map_resp(long, leng, spn, pt=point)), (0, 0))
+                screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
 
             if event.key == pygame.K_DOWN:
                 leng = str(round(float(leng) - 0.01, 3))
                 if float(leng) <= 35:
                     leng = "35.000"
                 screen.fill((0, 0, 0))
-                screen.blit(pygame.image.load(map_resp(long, leng, spn, pt=point)), (0, 0))
+                screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
 
             if event.key == pygame.K_LEFT:
                 long = str(round(float(long) - 0.01, 3))
                 if float(long) <= 23:
                     long = "23.000"
                 screen.fill((0, 0, 0))
-                screen.blit(pygame.image.load(map_resp(long, leng, spn, pt=point)), (0, 0))
+                screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
 
             if event.key == pygame.K_RIGHT:
                 long = str(round(float(long) + 0.01, 3))
                 if float(long) >= 180:
                     long = "180.000"
                 screen.fill((0, 0, 0))
-                screen.blit(pygame.image.load(map_resp(long, leng, spn, pt=point)), (0, 0))
+                screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
 
             render_search(screen, first=True)
 
+
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x, y = event.pos[0], event.pos[1]
+            mouse_pos = event.pos
             if x < 590 and x > 90 and y < 50 and y > 15:
                 pygame.draw.rect(screen, (200, 200, 200), (90, 15, 500, 35), 2)
                 inputting = True
+
+            elif rect.collidepoint(mouse_pos):
+                if style == "light":
+                    style = "dark"
+                else:
+                    style = "light"
+                screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))  # отрисовка карты
+                render_search(screen, first=True)
+
             else:
                 render_search(screen)
                 inputting = False
