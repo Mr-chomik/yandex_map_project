@@ -16,11 +16,20 @@ def render_search(screen, first=False):
         pygame.draw.rect(screen, (255, 255, 255), (90, 15, 500, 35), 0)
     pygame.draw.rect(screen, (50, 50, 50), (90, 15, 500, 35), 2)
 
-    #rect = create_theme_button()
-    #pygame.draw.rect(screen, (0, 0, 0), rect)
+    render_delete_button()
 
     dark_theme_button_image = load_image(f"to_{style}_theme.png")
     screen.blit(dark_theme_button_image, (545, 395))
+
+
+def render_delete_button():
+    pygame.draw.rect(screen, (220, 20, 50), (20, 410, 85, 30), 0)
+    pygame.draw.rect(screen, (150, 20, 20), (20, 410, 85, 30), 5)
+    pygame.draw.rect(screen, (0, 0, 0), (20, 410, 85, 30), 2)
+
+    font = pygame.font.Font(None, 27)
+    text = font.render("Сброс", True, (225, 225, 225))
+    screen.blit(text, (33, 416))
 
 
 def map_resp(long, leng, spn="0.05", theme='light', pt=None):
@@ -116,6 +125,7 @@ def create_theme_button():
     rect = pygame.Rect(x, y, size, size)
     return rect
 
+
 def load_image(image):
     image = pygame.image.load(image)
     image = pygame.transform.scale(image, (50, 50))
@@ -141,9 +151,7 @@ running = True
 
 while running:
     for event in pygame.event.get():
-
         rect = create_theme_button()
-
 
         if event.type == pygame.QUIT:
             running = False
@@ -195,7 +203,6 @@ while running:
 
             render_search(screen, first=True)
 
-
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x, y = event.pos[0], event.pos[1]
             mouse_pos = event.pos
@@ -209,6 +216,11 @@ while running:
                 else:
                     style = "light"
                 screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))  # отрисовка карты
+                render_search(screen, first=True)
+
+            elif x < 105 and x > 20 and y > 410 and y < 440:
+                point = None
+                screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
                 render_search(screen, first=True)
 
             else:
