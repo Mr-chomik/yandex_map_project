@@ -6,17 +6,22 @@ from io import BytesIO
 
 server_address = 'https://static-maps.yandex.ru/v1?'
 API_KEY = '8013b162-6b42-4997-9691-77b7074026e0'
+full_address = ''
+COLOR = (30, 30, 30)
 
 
 def render_search(screen, first=False):
-    font = pygame.font.Font(None, 30)
-    text = font.render("Адрес:", True, (30, 30, 30))
-    screen.blit(text, (10, 25))
+    global full_address
+
     if first:
         pygame.draw.rect(screen, (255, 255, 255), (90, 15, 500, 35), 0)
     pygame.draw.rect(screen, (50, 50, 50), (90, 15, 500, 35), 2)
 
+    font = pygame.font.Font(None, 30)
+    text = font.render(f"Адрес: ", True, COLOR)
+    screen.blit(text, (10, 25))
     render_delete_button()
+    render_full_address(full_address)
 
     dark_theme_button_image = load_image(f"to_{style}_theme.png")
     screen.blit(dark_theme_button_image, (545, 395))
@@ -30,6 +35,39 @@ def render_delete_button():
     font = pygame.font.Font(None, 27)
     text = font.render("Сброс", True, (225, 225, 225))
     screen.blit(text, (33, 416))
+
+
+def render_full_address(address):
+    matrix = address.split(", ")
+    result = []
+    font = pygame.font.Font(None, 27)
+
+    for elem in matrix:
+        if elem not in result:
+            result.append(elem)
+
+    line_height = font.get_linesize()
+    current_y = 55
+
+    for text in result:
+        words = text.split(' ')
+        current_line = ""
+
+        for word in words:
+            test_line = current_line + word + " "
+            text_surface = font.render(test_line, True, COLOR)
+
+            if text_surface.get_width() > 500:
+                screen.blit(font.render(current_line, True, COLOR), (95, current_y))
+                current_y += line_height
+
+                current_line = word + " "
+            else:
+                current_line = test_line
+
+        if current_line:
+            screen.blit(font.render(current_line, True, COLOR), (95, current_y))
+            current_y += line_height
 
 
 def map_resp(long, leng, spn="0.05", theme='light', pt=None):
@@ -54,6 +92,7 @@ def map_resp(long, leng, spn="0.05", theme='light', pt=None):
 
 
 def geocode(address):
+    global full_address
     geocoder_request = f"http://geocode-maps.yandex.ru/1.x/?apikey={API_KEY}" \
                        f"&geocode={address}&format=json"
 
@@ -69,7 +108,17 @@ def geocode(address):
                 request=geocoder_request, status=response.status_code, reason=response.reason))
 
     features = json_response["response"]["GeoObjectCollection"]["featureMember"]
+    full_address = get_full_address(features)
     return features[0]["GeoObject"] if features else None
+
+
+def get_full_address(features):
+    # получение полного адреса
+    full_address = features[0]['GeoObject']['metaDataProperty']['GeocoderMetaData']['Address']
+    address_parts = [component['name'] for component in full_address['Components']]
+
+    normal_address = ", ".join(address_parts)
+    return normal_address
 
 
 def get_coordinates(address):
@@ -83,7 +132,7 @@ def get_coordinates(address):
 
 
 def input_address(screen, address):
-    global long, leng, point
+    global long, leng, point, full_address
     if event.key == pygame.K_RETURN:
         long, leng = get_coordinates(address)
         address = ""
@@ -133,6 +182,10 @@ def load_image(image):
 
 
 pygame.init()
+
+inputting = False
+running = True
+
 screen = pygame.display.set_mode((600, 450))
 point = None
 long = "37.530887"
@@ -141,12 +194,11 @@ spn = "0.05"
 style = "light"
 screen.blit(pygame.image.load(map_resp(long, leng, spn, style)), (0, 0))  # отрисовка карты
 create_theme_button()
-render_search(screen, first=True)
 rect = create_theme_button()
 pygame.display.flip()
 address = ""
-inputting = False
-running = True
+full_address = ""
+render_search(screen, first=True)
 
 
 while running:
@@ -213,13 +265,16 @@ while running:
             elif rect.collidepoint(mouse_pos):
                 if style == "light":
                     style = "dark"
+                    COLOR = (250, 235, 215)
                 else:
                     style = "light"
+                    COLOR = (30, 30, 30)
                 screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))  # отрисовка карты
                 render_search(screen, first=True)
 
             elif x < 105 and x > 20 and y > 410 and y < 440:
                 point = None
+                full_address = ''
                 screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
                 render_search(screen, first=True)
 
