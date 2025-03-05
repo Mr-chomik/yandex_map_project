@@ -6,20 +6,24 @@ from io import BytesIO
 
 server_address = 'https://static-maps.yandex.ru/v1?'
 API_KEY = '8013b162-6b42-4997-9691-77b7074026e0'
+full_address = ''
 
+def render_search(screen, first=False, address=full_address):
+    global full_address
 
-def render_search(screen, first=False):
-    font = pygame.font.Font(None, 30)
-    text = font.render("Адрес:", True, (30, 30, 30))
-    screen.blit(text, (10, 25))
     if first:
         pygame.draw.rect(screen, (255, 255, 255), (90, 15, 500, 35), 0)
     pygame.draw.rect(screen, (50, 50, 50), (90, 15, 500, 35), 2)
 
+    font = pygame.font.Font(None, 30)
+    text = font.render(f"Адрес: ", True, (30, 30, 30))
+    screen.blit(text, (10, 25))
     render_delete_button()
+    render_full_address(full_address)
 
     dark_theme_button_image = load_image(f"to_{style}_theme.png")
     screen.blit(dark_theme_button_image, (545, 395))
+
 
 
 def render_delete_button():
@@ -30,6 +34,21 @@ def render_delete_button():
     font = pygame.font.Font(None, 27)
     text = font.render("Сброс", True, (225, 225, 225))
     screen.blit(text, (33, 416))
+
+def render_full_address(address):
+    lines = 1
+    if len(address) > 44:
+        lines = len(address) // 44 + 1
+    y = 55
+    for line in range(lines):
+        plus = 33 * line
+        adr = address[0 + plus: 33 + plus]
+        if line == lines - 1:
+            adr = address[0 + plus::]
+        font = pygame.font.Font(None, 27)
+        text = font.render(adr, True, (0, 0, 0))
+        screen.blit(text, (95, y))
+        y += 15
 
 
 def map_resp(long, leng, spn="0.05", theme='light', pt=None):
@@ -54,6 +73,7 @@ def map_resp(long, leng, spn="0.05", theme='light', pt=None):
 
 
 def geocode(address):
+    global full_address
     geocoder_request = f"http://geocode-maps.yandex.ru/1.x/?apikey={API_KEY}" \
                        f"&geocode={address}&format=json"
 
@@ -69,7 +89,17 @@ def geocode(address):
                 request=geocoder_request, status=response.status_code, reason=response.reason))
 
     features = json_response["response"]["GeoObjectCollection"]["featureMember"]
+    full_address = get_full_address(features)
     return features[0]["GeoObject"] if features else None
+
+def get_full_address(features):
+    # получение полного адреса
+    full_address = features[0]['GeoObject']['metaDataProperty']['GeocoderMetaData']['Address']
+    address_parts = [component['name'] for component in full_address['Components']]
+
+    normal_address = ", ".join(address_parts)
+    return normal_address
+
 
 
 def get_coordinates(address):
@@ -83,7 +113,7 @@ def get_coordinates(address):
 
 
 def input_address(screen, address):
-    global long, leng, point
+    global long, leng, point, full_address
     if event.key == pygame.K_RETURN:
         long, leng = get_coordinates(address)
         address = ""
@@ -126,13 +156,27 @@ def create_theme_button():
     return rect
 
 
+def create_theme_button():
+    x = 545
+    y = 395
+    size = 50
+    black = 0, 0, 0
+    rect = pygame.Rect(x, y, size, size)
+    return rect
+
+
 def load_image(image):
     image = pygame.image.load(image)
     image = pygame.transform.scale(image, (50, 50))
     return image
 
 
+
 pygame.init()
+
+inputting = False
+running = True
+
 screen = pygame.display.set_mode((600, 450))
 point = None
 long = "37.530887"
@@ -141,12 +185,12 @@ spn = "0.05"
 style = "light"
 screen.blit(pygame.image.load(map_resp(long, leng, spn, style)), (0, 0))  # отрисовка карты
 create_theme_button()
-render_search(screen, first=True)
 rect = create_theme_button()
 pygame.display.flip()
 address = ""
-inputting = False
-running = True
+full_address = ""
+render_search(screen, first=True, address=full_address)
+
 
 
 while running:
@@ -201,7 +245,7 @@ while running:
                 screen.fill((0, 0, 0))
                 screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
 
-            render_search(screen, first=True)
+            render_search(screen, first=True, address=full_address)
 
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x, y = event.pos[0], event.pos[1]
@@ -216,18 +260,21 @@ while running:
                 else:
                     style = "light"
                 screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))  # отрисовка карты
-                render_search(screen, first=True)
+                render_search(screen, first=True, address=full_address)
 
             elif x < 105 and x > 20 and y > 410 and y < 440:
                 point = None
+                full_address = ''
                 screen.blit(pygame.image.load(map_resp(long, leng, spn, style, pt=point)), (0, 0))
-                render_search(screen, first=True)
+                render_search(screen, first=True, address=full_address)
 
             else:
                 render_search(screen)
                 inputting = False
 
+
         elif inputting and event.type == pygame.KEYDOWN:
              address = input_address(screen, address)
+
 
     pygame.display.flip()
